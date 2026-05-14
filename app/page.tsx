@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { SignInButton, SignUpButton, UserButton, ClerkLoaded } from "@clerk/nextjs";
+
 
 const features = [
   {
@@ -72,8 +74,15 @@ export default function LandingPage() {
             <a href="#testimonials" className="hover:text-white transition-colors">Stories</a>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="btn-ghost text-sm py-2 px-4">Log in</Link>
-            <Link href="/dashboard" className="btn-primary text-sm py-2 px-4">Get started free</Link>
+            <ClerkLoaded>
+              <SignInButton mode="redirect">
+                <button className="btn-ghost text-sm py-2 px-4">Log in</button>
+              </SignInButton>
+              <SignUpButton mode="redirect">
+                <button className="btn-primary text-sm py-2 px-4">Get started free</button>
+              </SignUpButton>
+              <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+            </ClerkLoaded>
           </div>
         </div>
       </nav>

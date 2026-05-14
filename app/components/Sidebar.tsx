@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UserButton, useUser } from "@clerk/nextjs";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -10,6 +11,7 @@ const links = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useUser();
 
   return (
     <aside className="hidden md:flex flex-col w-56 min-h-screen bg-[#0a1628] border-r border-white/10 p-4 flex-shrink-0">
@@ -47,13 +49,21 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-white/10 pt-4">
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-xl text-white/30 hover:text-white hover:bg-white/5 transition-all text-sm">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Back to site
-        </Link>
+      {/* User section */}
+      <div className="border-t border-white/10 pt-4 space-y-3">
+        {user && (
+          <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
+            <UserButton
+              appearance={{
+                elements: { avatarBox: "w-8 h-8" },
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate">{user.fullName || user.username}</p>
+              <p className="text-white/35 text-xs truncate">{user.primaryEmailAddress?.emailAddress}</p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

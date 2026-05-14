@@ -189,7 +189,7 @@ export default function Home() {
                             key={i}
                             className="border-l-4 border-amber-400 pl-4 italic text-gray-600 text-sm"
                           >
-                            "{quote}"
+                            &ldquo;{quote}&rdquo;
                           </blockquote>
                         ))}
                       </div>
@@ -301,7 +301,7 @@ export default function Home() {
                           </span>
                         </div>
                         <div className="px-4 py-3">
-                          <p className="text-sm text-gray-700 italic leading-relaxed">"{clip.clip}"</p>
+                          <p className="text-sm text-gray-700 italic leading-relaxed">&ldquo;{clip.clip}&rdquo;</p>
                         </div>
                       </div>
                     ))}

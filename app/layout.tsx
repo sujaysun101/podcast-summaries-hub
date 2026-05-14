@@ -1,35 +1,15 @@
-﻿import type { Metadata } from "next";
-import localFont from "next/font/local";
+import type { Metadata } from "next";
 import "./globals.css";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
-
 export const metadata: Metadata = {
-  title: "Podcast Summaries Hub",
-  description: "AI-powered podcast content repurposing",
+  title: "YieldCast — AI Sponsor Matching for Podcasters",
+  description: "Stop pitching cold. YieldCast analyses your podcast, profiles your audience, matches you with niche brands, and writes the pitch.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

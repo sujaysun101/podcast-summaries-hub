@@ -2,26 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-[#020817] text-white antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
   }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-[#0a1628]; }
+  ::-webkit-scrollbar-thumb { @apply bg-[#1e3a6e] rounded-full; }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+@layer components {
+  .btn-primary {
+    @apply bg-emerald-500 hover:bg-emerald-400 text-white font-semibold px-6 py-3 rounded-xl
+           transition-all duration-200 shadow-lg hover:-translate-y-0.5 active:translate-y-0
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+    box-shadow: 0 4px 24px -4px rgba(16,185,129,0.35);
+  }
+  .btn-ghost {
+    @apply border border-white/20 hover:border-emerald-500/50 text-white/70 hover:text-white
+           font-medium px-6 py-3 rounded-xl transition-all duration-200;
+  }
+  .card {
+    @apply bg-[#0f2040]/70 border border-white/10 rounded-2xl backdrop-blur-sm;
   }
 }

@@ -1,317 +1,241 @@
-﻿"use client";
+import Link from "next/link";
+import { SignInButton, SignUpButton, UserButton, ClerkLoaded } from "@clerk/nextjs";
 
-import { useState } from "react";
 
-type Chapter = { timestamp: string; title: string; summary: string };
-type Clip = { title: string; startTimestamp: string; endTimestamp: string; clip: string };
+const features = [
+  {
+    step: "01",
+    title: "Psychographic Audience Analysis",
+    description:
+      "We ingest your RSS feed and recent transcripts, then map the deep interests, values, and buying behaviours of your listeners — not just age and gender.",
+    bullets: ["Content theme extraction", "Listener persona generation", "Engagement signal scoring"],
+  },
+  {
+    step: "02",
+    title: "AI Brand Matching & Lead Gen",
+    description:
+      "Our model cross-references your audience profile against thousands of brands actively looking for niche podcast placements. No cold Googling required.",
+    bullets: ["Real-time brand database scan", "Fit-score ranking 0–100", "Direct decision-maker contacts"],
+  },
+  {
+    step: "03",
+    title: "Personalised Pitch Decks & Outreach",
+    description:
+      "Generate a full sponsor pitch and bespoke cold emails for each matched brand in seconds. Edit inline, export as text, or send directly.",
+    bullets: ["Per-brand email personalisation", "Follow-up sequence drafts", "One-click export"],
+  },
+];
 
-type PodcastResult = {
-  summary: string;
-  chapters: Chapter[];
-  showNotes: string;
-  keyInsights: string[];
-  quotes: string[];
-  tweetThread: string[];
-  linkedinPost: string;
-  shortClips: Clip[];
-  seoTitle: string;
-  seoDescription: string;
-  tags: string[];
-};
+const testimonials = [
+  {
+    name: "Priya Menon",
+    show: "The Indie Founder Files",
+    downloads: "12k / ep",
+    quote:
+      "I landed a $4,800/month sponsorship within two weeks. The pitch email YieldCast wrote was better than anything I could have drafted myself.",
+  },
+  {
+    name: "Marcus Webb",
+    show: "Dark Matter Finance",
+    downloads: "28k / ep",
+    quote:
+      "The audience psychographic report alone is worth the subscription. I finally had data to back up why my listeners convert better than a show 10× my size.",
+  },
+  {
+    name: "Chiara Romano",
+    show: "Slow Burn Wellness",
+    downloads: "7k / ep",
+    quote:
+      "I used to spend 6 hours a week chasing sponsors. YieldCast cut that to 20 minutes. The brand matches are scarily accurate for my niche.",
+  },
+];
 
-type Tab = "summary" | "chapters" | "shownotes" | "social" | "clips";
+const stats = [
+  { value: "$2.4M", label: "Sponsorship revenue unlocked" },
+  { value: "340+", label: "Independent shows onboarded" },
+  { value: "18 days", label: "Avg. time to first deal" },
+  { value: "94%", label: "Brand match accuracy" },
+];
 
-export default function Home() {
-  const [podcastName, setPodcastName] = useState("");
-  const [episodeTitle, setEpisodeTitle] = useState("");
-  const [transcript, setTranscript] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<PodcastResult | null>(null);
-  const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<Tab>("summary");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!transcript.trim()) return;
-    setLoading(true);
-    setError("");
-    setResult(null);
-    try {
-      const res = await fetch("/api/process-podcast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript, podcastName, episodeTitle }),
-      });
-      if (!res.ok) throw new Error("API error");
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setResult(data);
-      setActiveTab("summary");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "summary", label: "Summary" },
-    { id: "chapters", label: "Chapters" },
-    { id: "shownotes", label: "Show Notes" },
-    { id: "social", label: "Social" },
-    { id: "clips", label: "Clips" },
-  ];
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-amber-500 to-orange-500 text-white py-8 px-6 shadow-lg">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold tracking-tight">🎙️ Podcast Summaries Hub</h1>
-          <p className="mt-1 text-amber-100 text-sm">
-            Turn any podcast transcript into chapters, show notes, social clips, and tweet threads — instantly.
-          </p>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Input form */}
-        <div className="bg-white rounded-2xl shadow-md p-6 mb-8 border border-amber-100">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Podcast Name
-                </label>
-                <input
-                  type="text"
-                  value={podcastName}
-                  onChange={(e) => setPodcastName(e.target.value)}
-                  placeholder="e.g. Lex Fridman Podcast"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Episode Title
-                </label>
-                <input
-                  type="text"
-                  value={episodeTitle}
-                  onChange={(e) => setEpisodeTitle(e.target.value)}
-                  placeholder="e.g. #400 - The Future of AI"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Transcript <span className="text-red-400">*</span>
-              </label>
-              <textarea
-                value={transcript}
-                onChange={(e) => setTranscript(e.target.value)}
-                placeholder="Paste your full podcast transcript here..."
-                rows={10}
-                required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-y"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading || !transcript.trim()}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-3 px-6 rounded-xl hover:from-amber-600 hover:to-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Processing Episode...
-                </>
-              ) : (
-                "⚡ Process Episode"
-              )}
-            </button>
-          </form>
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
-        </div>
-
-        {/* Results */}
-        {result && (
-          <div className="bg-white rounded-2xl shadow-md border border-amber-100 overflow-hidden">
-            {/* Tabs */}
-            <div className="flex border-b border-gray-100 overflow-x-auto">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-5 py-3 text-sm font-medium whitespace-nowrap transition ${
-                    activeTab === tab.id
-                      ? "border-b-2 border-amber-500 text-amber-600 bg-amber-50"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="p-6">
-              {/* Summary Tab */}
-              {activeTab === "summary" && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 mb-2">Episode Summary</h2>
-                    <p className="text-gray-700 leading-relaxed">{result.summary}</p>
-                  </div>
-                  {result.keyInsights?.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-gray-800 mb-2">Key Insights</h3>
-                      <ul className="space-y-2">
-                        {result.keyInsights.map((insight, i) => (
-                          <li key={i} className="flex gap-2 text-sm text-gray-700">
-                            <span className="text-amber-500 font-bold mt-0.5">•</span>
-                            <span>{insight}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {result.quotes?.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-gray-800 mb-2">Memorable Quotes</h3>
-                      <div className="space-y-3">
-                        {result.quotes.map((quote, i) => (
-                          <blockquote
-                            key={i}
-                            className="border-l-4 border-amber-400 pl-4 italic text-gray-600 text-sm"
-                          >
-                            "{quote}"
-                          </blockquote>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {result.tags?.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-gray-800 mb-2">Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {result.tags.map((tag, i) => (
-                          <span
-                            key={i}
-                            className="bg-amber-100 text-amber-700 text-xs font-medium px-3 py-1 rounded-full"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {result.seoTitle && (
-                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                      <h3 className="font-semibold text-gray-800 mb-1 text-sm">SEO Title</h3>
-                      <p className="text-gray-700 text-sm">{result.seoTitle}</p>
-                      <h3 className="font-semibold text-gray-800 mb-1 mt-3 text-sm">SEO Description</h3>
-                      <p className="text-gray-600 text-sm">{result.seoDescription}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Chapters Tab */}
-              {activeTab === "chapters" && (
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 mb-4">Chapters</h2>
-                  <div className="space-y-3">
-                    {result.chapters?.map((ch, i) => (
-                      <div
-                        key={i}
-                        className="flex gap-4 p-4 bg-amber-50 rounded-xl border border-amber-100"
-                      >
-                        <span className="text-amber-600 font-mono text-sm font-semibold mt-0.5 whitespace-nowrap">
-                          {ch.timestamp}
-                        </span>
-                        <div>
-                          <p className="font-semibold text-gray-800 text-sm">{ch.title}</p>
-                          <p className="text-gray-600 text-sm mt-0.5">{ch.summary}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Show Notes Tab */}
-              {activeTab === "shownotes" && (
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 mb-4">Show Notes</h2>
-                  <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                    <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
-                      {result.showNotes}
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* Social Tab */}
-              {activeTab === "social" && (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900 mb-3">Tweet Thread</h2>
-                    <div className="space-y-3">
-                      {result.tweetThread?.map((tweet, i) => (
-                        <div
-                          key={i}
-                          className="bg-sky-50 border border-sky-100 rounded-xl p-4 text-sm text-gray-800"
-                        >
-                          <span className="text-sky-400 font-bold text-xs mr-2">{i + 1}/</span>
-                          {tweet}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {result.linkedinPost && (
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900 mb-3">LinkedIn Post</h2>
-                      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                        {result.linkedinPost}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Clips Tab */}
-              {activeTab === "clips" && (
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 mb-4">Short Clips</h2>
-                  <div className="space-y-4">
-                    {result.shortClips?.map((clip, i) => (
-                      <div
-                        key={i}
-                        className="border border-orange-100 rounded-xl overflow-hidden"
-                      >
-                        <div className="bg-orange-50 px-4 py-2 flex items-center gap-3">
-                          <span className="text-orange-600 font-semibold text-sm">{clip.title}</span>
-                          <span className="text-gray-400 text-xs">
-                            {clip.startTimestamp} → {clip.endTimestamp}
-                          </span>
-                        </div>
-                        <div className="px-4 py-3">
-                          <p className="text-sm text-gray-700 italic leading-relaxed">"{clip.clip}"</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+    <div className="min-h-screen bg-[#020817] overflow-x-hidden">
+      {/* Navbar */}
+      <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/10 bg-[#020817]/80 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-bold text-lg text-white">
+            <svg className="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+            </svg>
+            YieldCast
           </div>
-        )}
-      </div>
-    </main>
+          <div className="hidden md:flex items-center gap-8 text-sm text-white/60">
+            <a href="#features" className="hover:text-white transition-colors">Features</a>
+            <a href="#testimonials" className="hover:text-white transition-colors">Stories</a>
+          </div>
+          <div className="flex items-center gap-3">
+            <ClerkLoaded>
+              <SignInButton mode="redirect">
+                <button className="btn-ghost text-sm py-2 px-4">Log in</button>
+              </SignInButton>
+              <SignUpButton mode="redirect">
+                <button className="btn-primary text-sm py-2 px-4">Get started free</button>
+              </SignUpButton>
+              <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+            </ClerkLoaded>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="relative pt-36 pb-24 px-4 flex flex-col items-center text-center">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full blur-3xl pointer-events-none"
+          style={{ background: "radial-gradient(ellipse, rgba(16,185,129,0.08) 0%, transparent 70%)" }} />
+
+        <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 rounded-full px-4 py-1.5 text-emerald-400 text-sm font-medium mb-8">
+          <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+          Now in public beta — 14 days free
+        </div>
+
+        <h1 className="text-5xl md:text-7xl font-extrabold text-white leading-tight tracking-tight max-w-4xl">
+          Stop pitching cold.{" "}
+          <span className="text-emerald-400">Start closing sponsors.</span>
+        </h1>
+
+        <p className="mt-6 text-lg md:text-xl text-white/55 max-w-2xl leading-relaxed">
+          YieldCast analyses your podcast content, profiles your audience, matches you with niche brands,
+          and writes the pitch — so you can monetise the engaged community you&apos;ve already built.
+        </p>
+
+        <div className="mt-10 flex flex-col sm:flex-row gap-4">
+          <Link href="/dashboard" className="btn-primary flex items-center gap-2 text-base px-8 py-4">
+            Generate Your First Pitch Deck
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </Link>
+          <button className="btn-ghost flex items-center gap-2 text-base">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            See a live demo
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 w-full max-w-3xl">
+          {stats.map((s) => (
+            <div key={s.label} className="flex flex-col items-center">
+              <span className="text-3xl font-extrabold text-emerald-400">{s.value}</span>
+              <span className="text-white/40 text-sm mt-1 text-center">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="py-24 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-emerald-400 text-sm font-semibold uppercase tracking-widest mb-3">How it works</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-white">
+              Three steps from transcript{" "}
+              <span className="text-white/40">to signed deal.</span>
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {features.map((f) => (
+              <div key={f.step} className="card p-7 group hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1">
+                <span className="text-4xl font-black text-emerald-500/20 group-hover:text-emerald-500/40 transition-colors">{f.step}</span>
+                <h3 className="text-xl font-bold text-white mt-3 mb-3">{f.title}</h3>
+                <p className="text-white/50 text-sm leading-relaxed mb-5">{f.description}</p>
+                <ul className="space-y-2">
+                  {f.bullets.map((b) => (
+                    <li key={b} className="flex items-center gap-2 text-sm text-white/65">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section id="testimonials" className="py-24 px-4 bg-[#0a1628]/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-emerald-400 text-sm font-semibold uppercase tracking-widest mb-3">Creator stories</p>
+            <h2 className="text-4xl md:text-5xl font-bold text-white">Built for shows like yours.</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t) => (
+              <div key={t.name} className="card p-7 flex flex-col">
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className="w-4 h-4 text-emerald-400 fill-emerald-400" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-white/70 text-sm leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
+                <div className="mt-6 pt-5 border-t border-white/10 flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-semibold text-sm">{t.name}</p>
+                    <p className="text-white/35 text-xs mt-0.5">{t.show}</p>
+                  </div>
+                  <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full font-medium">
+                    {t.downloads}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-24 px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="card p-12 relative overflow-hidden" style={{ boxShadow: "0 0 80px -20px rgba(16,185,129,0.2)" }}>
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none" />
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Your audience is already worth{" "}
+              <span className="text-emerald-400">more than you think.</span>
+            </h2>
+            <p className="text-white/50 mb-8 text-lg">
+              Stop leaving sponsorship revenue on the table because you don&apos;t have time to pitch. Let the AI do the work.
+            </p>
+            <Link href="/dashboard" className="btn-primary inline-flex items-center gap-2 text-base px-8 py-4">
+              Generate Your First Pitch Deck
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+            <p className="text-white/25 text-xs mt-4">No credit card required · 14-day free trial</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-8 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-white/30 text-sm">
+          <div className="font-bold text-white/50 flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+            </svg>
+            YieldCast
+          </div>
+          <p>© 2025 YieldCast. All rights reserved.</p>
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-white transition-colors">Privacy</a>
+            <a href="#" className="hover:text-white transition-colors">Terms</a>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

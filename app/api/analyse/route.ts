@@ -5,7 +5,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const SYSTEM_PROMPT = `You are an elite podcast monetization expert and media buyer with 15 years of experience placing brands inside niche audio content.
 
-Your goal is to analyse the provided podcast transcript or show description, determine the exact demographic and psychographic profile of the listener, and identify 10 highly relevant, niche brands that would benefit from sponsoring this specific content.
+Your goal is to analyse the provided podcast or video content metadata, determine the exact demographic and psychographic profile of the listener/viewer, and identify 10 highly relevant, niche brands that would benefit from sponsoring this specific content.
 
 You think in terms of audience intent, purchase readiness, and brand-audience resonance — not just surface-level topic alignment.
 
@@ -40,18 +40,14 @@ pitch_emails must contain exactly 3 entries for the top 3 brands.`;
 async function parseRSS(url: string): Promise<string> {
   const res = await fetch(url, { headers: { "User-Agent": "YieldCast/1.0" } });
   const xml = await res.text();
-
-  // Extract description/summary text from items
   const items = Array.from(xml.matchAll(/<item[\s\S]*?<\/item>/g)).slice(0, 3);
   const texts = items.map((m) => {
     const desc = m[0].match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
     const title = m[0].match(/<title>([\s\S]*?)<\/title>/)?.[1] || "";
     return `${title}\n${desc}`.replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").trim();
   });
-
   const showTitle = xml.match(/<channel>[\s\S]*?<title>([\s\S]*?)<\/title>/)?.[1] || "Podcast";
   const showDesc = xml.match(/<description>([\s\S]*?)<\/description>/)?.[1]?.replace(/<[^>]+>/g, " ") || "";
-
   return `Show: ${showTitle}\nDescription: ${showDesc}\n\nRecent episodes:\n${texts.join("\n\n---\n\n")}`;
 }
 
@@ -61,52 +57,54 @@ export async function POST(req: NextRequest) {
 
   const contentType = req.headers.get("content-type") || "";
 
-  if (contentType.includes("multipart/form-data")) {
-    const form = await req.formData();
-    const rssUrl = form.get("rss_url") as string | null;
-    refinement = (form.get("refinement") as string) || "";
-
-    if (rssUrl) {
-      try {
-        content = await parseRSS(rssUrl);
-      } catch {
-        return NextResponse.json({ detail: "Failed to fetch RSS feed." }, { status: 422 });
-      }
-    } else {
-      return NextResponse.json({ detail: "Provide rss_url or audio file." }, { status: 400 });
-    }
-  } else {
+  if (contentType.includes("application/json")) {
     const body = await req.json();
     refinement = body.refinement || "";
-    if (body.rss_url) {
-      try {
-        content = await parseRSS(body.rss_url);
-      } catch {
-        return NextResponse.json({ detail: "Failed to fetch RSS feed." }, { status: 422 });
-      }
+
+    if (body.title || body.description) {
+      // Direct metadata path (from YouTube/Spotify/Rumble card click)
+      content = [
+        body.title && `Title: ${body.title}`,
+        body.creator && `Creator/Channel: ${body.creator}`,
+        body.description && `Description: ${body.description}`,
+        body.platform && `Platform: ${body.platform}`,
+        body.genre && `Genre/Category: ${body.genre}`,
+      ].filter(Boolean).join("\n");
+    } else if (body.rss_url) {
+      try { content = await parseRSS(body.rss_url); }
+      catch { return NextResponse.json({ detail: "Failed to fetch RSS feed." }, { status: 422 }); }
+    } else {
+      return NextResponse.json({ detail: "Provide title/description or rss_url." }, { status: 400 });
+    }
+  } else if (contentType.includes("multipart/form-data")) {
+    const form = await req.formData();
+    refinement = (form.get("refinement") as string) || "";
+    const rssUrl = form.get("rss_url") as string | null;
+    if (rssUrl) {
+      try { content = await parseRSS(rssUrl); }
+      catch { return NextResponse.json({ detail: "Failed to fetch RSS feed." }, { status: 422 }); }
     } else {
       return NextResponse.json({ detail: "Provide rss_url." }, { status: 400 });
     }
+  } else {
+    return NextResponse.json({ detail: "Unsupported content type." }, { status: 400 });
   }
 
   const refinementBlock = refinement
     ? `\n\nADDITIONAL CONSTRAINT: ${refinement}\nApply this when selecting and ranking brand matches.`
     : "";
 
-  const userPrompt = `${content}${refinementBlock}\n\n${OUTPUT_SCHEMA}`;
-
   try {
     const msg = await client.messages.create({
       model: "claude-opus-4-7",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
+      messages: [{ role: "user", content: `${content}${refinementBlock}\n\n${OUTPUT_SCHEMA}` }],
     });
 
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ detail: "Failed to parse AI response." }, { status: 500 });
-
     return NextResponse.json(JSON.parse(match[0]));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "AI analysis failed.";

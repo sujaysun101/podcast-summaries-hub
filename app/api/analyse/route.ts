@@ -1,113 +1,65 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { analyseInputSchema, runAnalysis } from "@/lib/ai";
+import { getViewer } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
+import { store } from "@/lib/store";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-const SYSTEM_PROMPT = `You are an elite podcast monetization expert and media buyer with 15 years of experience placing brands inside niche audio content.
-
-Your goal is to analyse the provided podcast or video content metadata, determine the exact demographic and psychographic profile of the listener/viewer, and identify 10 highly relevant, niche brands that would benefit from sponsoring this specific content.
-
-You think in terms of audience intent, purchase readiness, and brand-audience resonance — not just surface-level topic alignment.
-
-Always return a single valid JSON object — no markdown fences, no commentary before or after.`;
-
-const OUTPUT_SCHEMA = `Return ONLY a JSON object with exactly this structure:
-{
-  "audience_profile": {
-    "age_range": "string",
-    "primary_interests": ["string"],
-    "values": "string",
-    "income_bracket": "string",
-    "purchase_behaviour": "string",
-    "content_themes": "string",
-    "engagement_style": "string"
-  },
-  "brand_matches": [
-    {
-      "name": "string",
-      "category": "string",
-      "fit_score": 0,
-      "reason": "string",
-      "contact": "string"
-    }
-  ],
-  "pitch_emails": ["full pitch email string for each of the top 3 brands"]
-}
-
-brand_matches must contain exactly 10 entries ordered by fit_score descending (0-100).
-pitch_emails must contain exactly 3 entries for the top 3 brands.`;
-
-async function parseRSS(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { "User-Agent": "YieldCast/1.0" } });
-  const xml = await res.text();
-  const items = Array.from(xml.matchAll(/<item[\s\S]*?<\/item>/g)).slice(0, 3);
-  const texts = items.map((m) => {
-    const desc = m[0].match(/<description>([\s\S]*?)<\/description>/)?.[1] || "";
-    const title = m[0].match(/<title>([\s\S]*?)<\/title>/)?.[1] || "";
-    return `${title}\n${desc}`.replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").trim();
-  });
-  const showTitle = xml.match(/<channel>[\s\S]*?<title>([\s\S]*?)<\/title>/)?.[1] || "Podcast";
-  const showDesc = xml.match(/<description>([\s\S]*?)<\/description>/)?.[1]?.replace(/<[^>]+>/g, " ") || "";
-  return `Show: ${showTitle}\nDescription: ${showDesc}\n\nRecent episodes:\n${texts.join("\n\n---\n\n")}`;
-}
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  let content = "";
-  let refinement = "";
+  const viewer = await getViewer();
+  if (!viewer) {
+    return NextResponse.json({ detail: "Sign in required." }, { status: 401 });
+  }
 
+  const limited = await rateLimit(viewer.userId);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { detail: "Rate limit reached. Try again in a minute.", remaining: limited.remaining },
+      { status: 429 },
+    );
+  }
+
+  let payload: unknown;
   const contentType = req.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    const body = await req.json();
-    refinement = body.refinement || "";
-
-    if (body.title || body.description) {
-      // Direct metadata path (from YouTube/Spotify/Rumble card click)
-      content = [
-        body.title && `Title: ${body.title}`,
-        body.creator && `Creator/Channel: ${body.creator}`,
-        body.description && `Description: ${body.description}`,
-        body.platform && `Platform: ${body.platform}`,
-        body.genre && `Genre/Category: ${body.genre}`,
-      ].filter(Boolean).join("\n");
-    } else if (body.rss_url) {
-      try { content = await parseRSS(body.rss_url); }
-      catch { return NextResponse.json({ detail: "Failed to fetch RSS feed." }, { status: 422 }); }
-    } else {
-      return NextResponse.json({ detail: "Provide title/description or rss_url." }, { status: 400 });
-    }
-  } else if (contentType.includes("multipart/form-data")) {
-    const form = await req.formData();
-    refinement = (form.get("refinement") as string) || "";
-    const rssUrl = form.get("rss_url") as string | null;
-    if (rssUrl) {
-      try { content = await parseRSS(rssUrl); }
-      catch { return NextResponse.json({ detail: "Failed to fetch RSS feed." }, { status: 422 }); }
-    } else {
-      return NextResponse.json({ detail: "Provide rss_url." }, { status: 400 });
-    }
-  } else {
-    return NextResponse.json({ detail: "Unsupported content type." }, { status: 400 });
-  }
-
-  const refinementBlock = refinement
-    ? `\n\nADDITIONAL CONSTRAINT: ${refinement}\nApply this when selecting and ranking brand matches.`
-    : "";
-
   try {
-    const msg = await client.messages.create({
-      model: "claude-opus-4-7",
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: `${content}${refinementBlock}\n\n${OUTPUT_SCHEMA}` }],
-    });
-
-    const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return NextResponse.json({ detail: "Failed to parse AI response." }, { status: 500 });
-    return NextResponse.json(JSON.parse(match[0]));
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "AI analysis failed.";
-    return NextResponse.json({ detail: msg }, { status: 500 });
+    if (contentType.includes("application/json")) {
+      payload = await req.json();
+    } else if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      payload = {
+        rss_url: form.get("rss_url") ?? undefined,
+        title: form.get("title") ?? undefined,
+        description: form.get("description") ?? undefined,
+        creator: form.get("creator") ?? undefined,
+        platform: form.get("platform") ?? undefined,
+        genre: form.get("genre") ?? undefined,
+        refinement: form.get("refinement") ?? undefined,
+        showId: form.get("showId") ?? undefined,
+      };
+    } else {
+      return NextResponse.json({ detail: "Unsupported content type." }, { status: 400 });
+    }
+  } catch {
+    return NextResponse.json({ detail: "Could not read the request body." }, { status: 400 });
   }
+
+  const parsed = analyseInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return NextResponse.json({ detail: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
+  }
+
+  const result = await runAnalysis(parsed.data);
+  if (!result.ok) {
+    return NextResponse.json({ detail: result.detail }, { status: result.status });
+  }
+
+  if (parsed.data.showId) {
+    const saved = await store.saveAnalysis(viewer.userId, parsed.data.showId, result.analysis);
+    if (!saved) {
+      return NextResponse.json({ detail: "Show not found for this account." }, { status: 400 });
+    }
+  }
+
+  return NextResponse.json({ ...result.analysis, remaining: limited.remaining });
 }

@@ -1,40 +1,49 @@
 import { SignIn } from "@clerk/nextjs";
+import Link from "next/link";
+import { AuthScreen } from "@/components/auth-screen";
+import { Button } from "@/components/ui/button";
+import { clerkUiEnabled } from "@/lib/flags";
+
+const appearance = {
+  variables: {
+    colorPrimary: "#1f6b45",
+    colorBackground: "#f4f1ea",
+    colorText: "#1c2b24",
+    colorInputBackground: "#fffdf8",
+    colorInputText: "#1c2b24",
+    borderRadius: "0.75rem",
+    fontFamily: "var(--font-outfit), sans-serif",
+  },
+  elements: {
+    rootBox: "w-full",
+    cardBox: "w-full shadow-none",
+    card: "w-full bg-transparent shadow-none",
+    headerTitle: "font-display text-[#1c2b24]",
+    headerSubtitle: "text-[#5c6b63]",
+    socialButtonsBlockButton: "border-[#d9d3c7]",
+    formButtonPrimary: "bg-[#1f6b45] hover:bg-[#185538]",
+    footerActionLink: "text-[#1f6b45]",
+  },
+};
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen bg-[#020817] flex flex-col items-center justify-center px-4">
-      <div className="mb-8 text-center">
-        <div className="flex items-center justify-center gap-2 font-bold text-xl text-white mb-2">
-          <svg className="w-6 h-6 text-emerald-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
-          </svg>
-          YieldCast
-        </div>
-        <p className="text-white/40 text-sm">Sign in to your account</p>
+    <AuthScreen title="Match the brands that already belong on your show.">
+      <div className="rounded-2xl bg-[#f4f1ea] p-2 text-[#1c2b24]">
+        {clerkUiEnabled() ? (
+          <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" forceRedirectUrl="/dashboard" appearance={appearance} />
+        ) : (
+          <div className="space-y-3 p-4">
+            <h2 className="font-display text-3xl">Sign in</h2>
+            <p className="text-sm text-[#5c6b63]">
+              Clerk runs in keyless mode during local development. This deployment has no Clerk keys and is serving the demo workspace directly.
+            </p>
+            <Button asChild>
+              <Link href="/dashboard">Continue to the demo workspace</Link>
+            </Button>
+          </div>
+        )}
       </div>
-      <SignIn
-        appearance={{
-          variables: {
-            colorPrimary: "#10b981",
-            colorBackground: "#0f2040",
-            colorText: "#ffffff",
-            colorTextSecondary: "rgba(255,255,255,0.5)",
-            colorInputBackground: "#0a1628",
-            colorInputText: "#ffffff",
-            borderRadius: "0.75rem",
-          },
-          elements: {
-            card: "shadow-2xl border border-white/10",
-            headerTitle: "text-white",
-            headerSubtitle: "text-white/50",
-            socialButtonsBlockButton: "border-white/15 text-white/70 hover:border-emerald-500/40 hover:text-white",
-            formFieldInput: "border-white/15 focus:border-emerald-500/50",
-            footerActionLink: "text-emerald-400 hover:text-emerald-300",
-            identityPreviewText: "text-white",
-            identityPreviewEditButton: "text-emerald-400",
-          },
-        }}
-      />
-    </div>
+    </AuthScreen>
   );
 }

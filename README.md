@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# YieldCast
 
-## Getting Started
+YieldCast is a sponsor desk for independent podcasters. Save a show, keep an audience profile, rank brand fits with a reason, draft a pitch, and move it across a board: drafted, sent, replied, won. Each show can publish a public media kit.
 
-First, run the development server:
+## Features
+
+- Saved shows with host, cadence, downloads, and a per-episode rate card
+- Audience profile stored with the show
+- Brand matches with a fit score and a written reason
+- Pitch drafts and an outreach kanban
+- Shareable media kit at `/kit/[slug]`
+- Dashboard charts for pipeline value and won packages
+- Demo workspace when `DATABASE_URL` is missing, labeled in the app
+
+## Stack
+
+Next.js 15 (App Router), TypeScript, Tailwind CSS v4, shadcn/ui, Clerk, Drizzle ORM, Postgres, Anthropic.
+
+The `yieldcast/` directory is the earlier Vite prototype. The product in this repository is the Next.js app at the root.
+
+## Local setup
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Clerk runs in keyless mode in development when the publishable and secret keys are empty. In production, set both keys. If they are missing in production, the app serves the demo workspace so a preview can still be clicked through.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database
 
-## Learn More
+```bash
+# DATABASE_URL must be a Postgres connection string (Neon or Supabase work)
+npm run db:migrate
+npm run db:seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+`db:seed` writes the demo shows for `SEED_USER_ID` (default `demo`). Without `DATABASE_URL`, the same demo workspace is served from memory and nothing is written.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See `.env.example` for names.
 
-## Deploy on Vercel
+| Name | Role |
+| --- | --- |
+| `DATABASE_URL` | Postgres. Omit it to use the in-memory demo store. |
+| `ANTHROPIC_API_KEY` | Live analysis and pitch drafts. Omit it for labeled sample responses. |
+| `AI_MODEL` | Claude model. Defaults to `claude-sonnet-4-5`. |
+| `AI_MAX_TOKENS` | Response cap, never above 4096. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key. |
+| `CLERK_SECRET_KEY` | Clerk secret key. |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/dashboard` |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/dashboard` |
+| `UPSTASH_REDIS_REST_URL` | Optional shared rate limit. |
+| `UPSTASH_REDIS_REST_TOKEN` | Optional shared rate limit. |
+| `NEXT_PUBLIC_APP_URL` | Absolute URL for metadata. |
+| `DEMO_SCREENSHOT` | Set to `1` only while capturing portfolio screenshots. Skips auth. |
+| `SEED_USER_ID` | User id the seed script fills. |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## AI route
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`POST /api/analyse` requires a signed-in user, validates the body with zod, and rate-limits per user (Upstash when configured, otherwise an in-memory token bucket). Bad input returns 400. A missing key, or a model reply that cannot be validated, returns a labeled sample analysis instead of a 500.
+
+## Screenshots
+
+```bash
+DEMO_SCREENSHOT=1 npm run dev
+# in another shell
+npm run screenshot
+```
+
+Writes `public/portfolio-screenshot.png` and `public/portfolio-screenshot-landing.png` at 1440×900.

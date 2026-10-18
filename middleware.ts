@@ -1,18 +1,19 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { hasClerkKeys } from "./lib/flags";
 
-const isProtected = createRouteMatcher(["/dashboard(.*)"]);
+const isPublic = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)", "/kit(.*)"]);
 
-// If Clerk keys are not configured, skip auth entirely (avoids MIDDLEWARE_INVOCATION_FAILED)
-const clerkConfigured =
-  !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
-  !!process.env.CLERK_SECRET_KEY;
+const clerk = clerkMiddleware(async (auth, req) => {
+  if (isPublic(req)) return;
+  await auth.protect();
+});
 
-export default clerkConfigured
-  ? clerkMiddleware(async (auth, req) => {
-      if (isProtected(req)) await auth.protect();
-    })
-  : () => NextResponse.next();
+export default function middleware(request: NextRequest, event: NextFetchEvent) {
+  if (process.env.DEMO_SCREENSHOT === "1") return NextResponse.next();
+  if (process.env.NODE_ENV === "production" && !hasClerkKeys()) return NextResponse.next();
+  return clerk(request, event);
+}
 
 export const config = {
   matcher: [
